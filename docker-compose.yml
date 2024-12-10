@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - EBMS_BASE_URL=${EBMS_BASE_URL}
+      - EBMS_BEARER_TOKEN=${EBMS_BEARER_TOKEN}
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    container_name: aenzbi_db
+    restart: always
+    environment:
+      POSTGRES_USER: aenzbi_user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: aenzbi_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  db_data:
