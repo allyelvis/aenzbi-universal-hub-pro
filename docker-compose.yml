@@ -1,31 +1,170 @@
-version: '3.8'
-
+version: '3'
 services:
-  backend:
-    build:
-      context: ./backend
+  api-gateway:
+    build: .
     ports:
       - "3000:3000"
     environment:
       - PORT=3000
-      - EBMS_BASE_URL=${EBMS_BASE_URL}
-      - EBMS_BEARER_TOKEN=${EBMS_BEARER_TOKEN}
-      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=redis
+      - DB_HOST=postgres
     depends_on:
-      - db
+      - redis
+      - postgres
+      - auth-service
+      - crm-service
+      - cms-service
+      - pms-service
+      - accounting-service
+      - fiscalization-service
+      - notification-service
+      - report-service
+      - analytics-service
+      - file-service
 
-  db:
-    image: postgres:15
-    container_name: aenzbi_db
-    restart: always
+  auth-service:
+    build: .
     environment:
-      POSTGRES_USER: aenzbi_user
+      - PORT=3010
+      - REDIS_HOST=redis
+      - DB_HOST=postgres
+    depends_on:
+      - redis
+      - postgres
+
+  crm-service:
+    build: .
+    environment:
+      - PORT=3001
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+
+  cms-service:
+    build: .
+    environment:
+      - PORT=3002
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+
+  pms-service:
+    build: .
+    environment:
+      - PORT=3003
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+
+  accounting-service:
+    build: .
+    environment:
+      - PORT=3004
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+
+  fiscalization-service:
+    build: .
+    environment:
+      - PORT=3005
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+
+  notification-service:
+    build: .
+    environment:
+      - PORT=3006
+      - REDIS_HOST=redis
+      - DB_HOST=postgres
+      - SMTP_HOST=smtp.example.com
+      - SMTP_PORT=587
+      - SMTP_USER=your-email@example.com
+      - SMTP_PASS=your-password
+    depends_on:
+      - redis
+      - postgres
+      - rabbitmq
+
+  report-service:
+    build: .
+    environment:
+      - PORT=3007
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+
+  analytics-service:
+    build: .
+    environment:
+      - PORT=3008
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
+      - spark
+
+  file-service:
+    build: .
+    environment:
+      - PORT=3009
+      - DB_HOST=postgres
+      - AWS_REGION=your-aws-region
+      - AWS_ACCESS_KEY_ID=your-access-key
+      - AWS_SECRET_ACCESS_KEY=your-secret-key
+      - S3_BUCKET_NAME=your-bucket-name
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: aenzbi_suite
+      POSTGRES_USER: admin
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: aenzbi_db
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:6
+
+  rabbitmq:
+    image: rabbitmq:3-management
     ports:
-      - "5432:5432"
+      - "5672:5672"
+      - "15672:15672"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.14.0
+    environment:
+      - discovery.type=single-node
+    ports:
+      - "9200:9200"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.14.0
+    volumes:
+      - ./logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    depends_on:
+      - elasticsearch
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.14.0
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  spark:
+    image: bitnami/spark:3
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+    ports:
+      - "8080:8080"
 
 volumes:
-  db_data:
+  pgdata:
