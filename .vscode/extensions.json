@@ -1,0 +1,6 @@
+{
+    "recommendations": [
+        "microsoft.azure-cosmosdb-ads-extension",
+        "microsoft.net-6-runtime"
+    ]
+}
